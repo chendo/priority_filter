@@ -1,0 +1,46 @@
+priority_filter
+==============
+
+priority_filter is an extension of filters in Rails that allows you to set priorities to filters. The main benefit of this is you can now have a filter defined in a parent controller that gets executed after the same type of filter in a child controller.
+
+It does this by overriding all the *_filter methods and storing them in an array, and then rebuilding the filter chain whenever a filter is added or skipped. This causes a longer loading time, but it only has to do this when the controller is loaded, so after the application loads, there is no performance hit (that I can see).
+
+A more elegant solution would to be override the find_filter_append/prepend_position, but it wasn't working for me so I gave up and went with this method.
+
+Usage
+=====
+
+All the *_filter methods now accept :priority as an option. :priority can be any positive integer, or :first (which gets changed to 0) or :last (will always be called after all other filters that are also not :last). Leaving out :priority sets the priority to 1. So if you install this plugin into an existing project, it (theoretically) will not change the filter execution order. prepend_*_filter simply implies :first.
+
+before_filter :filter, :priority => 5
+after_filter :after, :priority => :last
+
+
+Example
+=======
+
+class ApplicationController < ActionController::Base
+  before_filter :foo, :priority => 5
+  before_filter :bar, :priority => :first
+end
+
+class FooController < ApplicationController
+  before_filter :rah, :priority => 3
+  before_filter :moo, :priority => :first
+end
+
+class BarController < FooController
+  before_filter :kek
+  before_filter :bah, :priority => :last
+end
+
+Filter priorities (in execution order):
+  :bar => 0
+  :moo => 0
+  :kek => 1
+  :rah => 3
+  :foo => 5
+  :bah => last
+  
+
+Copyright (c) 2008 Jack Chen, under the MIT License
